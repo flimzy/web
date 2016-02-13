@@ -1,8 +1,8 @@
 package file
 
 import (
-	"github.com/flimzy/web/blob"
 	"github.com/gopherjs/gopherjs/js"
+	"github.com/flimzy/web/blob"
 	"time"
 )
 
@@ -12,14 +12,21 @@ type File interface {
 	Name() string
 }
 
-type file struct {
-	js.Object
+type FileObject struct {
+	blob.BlobObject
 }
 
-func (f *file) LastModifiedDate() time.Time {
+// Internalize internalizes a standard *js.Object to a File object
+func Internalize(o *js.Object) *FileObject {
+	return &FileObject{ blob.BlobObject{*o} }
+}
+
+var _ File = &FileObject{}
+
+func (f *FileObject) LastModifiedDate() time.Time {
 	return f.Get("lastModifiedDate").Interface().(time.Time)
 }
 
-func (f *file) Name() string {
+func (f *FileObject) Name() string {
 	return f.Get("name").String()
 }
