@@ -1,9 +1,7 @@
 package worker
 
 import (
-	"fmt"
 	"github.com/gopherjs/gopherjs/js"
-	"honnef.co/go/js/console"
 )
 
 type Worker struct {
@@ -21,13 +19,14 @@ func New(file string) *Worker {
 	worker := js.Global.Get("Worker").New(file)
 	c := make(chan work)
 	worker.Set("onerror", func(e *js.Error) {
-		fmt.Printf("onerror\n");
-		console.Log("%v", e)
-		c <- work{err: e}
+		go func() {
+			c <- work{err: e}
+		}()
 	})
 	worker.Set("onmessage", func(e *js.Object) {
-		fmt.Printf("onmessage\n");
-		c <- work{message: e.Get("data").Interface() }
+		go func() {
+			c <- work{message: e.Get("data").Interface()}
+		}()
 	})
 	return &Worker{
 		o:          worker,
@@ -35,11 +34,11 @@ func New(file string) *Worker {
 	}
 }
 
-func (w *Worker) Receive() (interface{},error) {
+func (w *Worker) Receive() (interface{}, error) {
 	// First see if there's anything to fetch
 	select {
-		case msg := <- w.fromWorker:
-			return msg.message, msg.err
+	case msg := <-w.fromWorker:
+		return msg.message, msg.err
 	}
 	// If we made it this far, it means the worker has terminated, and we've
 	// already drained the channel, so just return nothing
@@ -47,7 +46,7 @@ func (w *Worker) Receive() (interface{},error) {
 		return nil, nil
 	}
 	// Wait for something from the worker
-	msg := <- w.fromWorker
+	msg := <-w.fromWorker
 	return msg.message, msg.err
 }
 
